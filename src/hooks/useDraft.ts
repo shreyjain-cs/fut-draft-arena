@@ -18,10 +18,13 @@ interface Player {
 interface DraftedPlayer {
   player_slug: string;
   name: string;
-  overall_rating: number;
   purchase_price: number;
   best_position: string;
   position?: string;
+  image?: string;
+  overall_rating: number;
+  original_overall_rating?: number;
+  display_rating: number;
 }
 
 export const useDraft = () => {
@@ -30,6 +33,23 @@ export const useDraft = () => {
   const [purse, setPurse] = useState(500000000);
   const [squad, setSquad] = useState<DraftedPlayer[]>([]);
   const [isActive, setIsActive] = useState(false);
+
+  const refreshBudget = useCallback(async () => {
+    if (!draftId) return;
+    try {
+      const { data, error } = await supabase
+        .from('drafts')
+        .select('purse')
+        .eq('id', draftId)
+        .single();
+      if (error) throw error;
+      if (data) {
+        setPurse(data.purse);
+      }
+    } catch (error) {
+      toast({ title: "Could not refresh budget.", variant: "destructive" });
+    }
+  }, [draftId, toast]);
 
   const startDraft = useCallback(async () => {
     try {
@@ -69,6 +89,8 @@ export const useDraft = () => {
       player_slug: player.name,
       name: player.name,
       overall_rating: player.overall_rating,
+      original_overall_rating: player.overall_rating,
+      display_rating: player.overall_rating,
       purchase_price: price,
       best_position: player.best_position,
     };
@@ -133,5 +155,5 @@ export const useDraft = () => {
     }
   }, [draftId, toast]);
 
-  return { draftId, purse, squad, setSquad, isActive, startDraft, buyPlayer, sellPlayer, stopDraft };
+  return { draftId, purse, squad, setSquad, isActive, startDraft, buyPlayer, sellPlayer, stopDraft, refreshBudget };
 };

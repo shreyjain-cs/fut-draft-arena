@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,10 +29,13 @@ interface Player {
 interface DraftedPlayer {
   player_slug: string;
   name: string;
-  overall_rating: number;
   purchase_price: number;
   best_position: string;
   position?: string;
+  image?: string;
+  overall_rating: number;
+  original_overall_rating?: number;
+  display_rating: number;
 }
 
 const Index = () => {
@@ -51,7 +54,8 @@ const Index = () => {
     startDraft,
     buyPlayer,
     sellPlayer,
-    stopDraft
+    stopDraft,
+    refreshBudget
   } = useDraft();
 
   useEffect(() => {
@@ -107,9 +111,9 @@ const Index = () => {
     setShowSummary(true);
   };
 
-  const handleSquadChange = (updatedSquad: DraftedPlayer[]) => {
+  const handleSquadChange = useCallback((updatedSquad: DraftedPlayer[]) => {
     setSquad(updatedSquad);
-  };
+  }, [setSquad]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -122,8 +126,8 @@ const Index = () => {
   };
 
   const maxBudget = 500000000;
-  const budgetUsed = maxBudget - purse;
-  const budgetProgress = (budgetUsed / maxBudget) * 100;
+  const squadValue = squad.reduce((sum, p) => sum + p.purchase_price, 0);
+  const budgetProgress = (squadValue / maxBudget) * 100;
 
   if (!isActive && !draftId) {
     return (
@@ -209,14 +213,14 @@ const Index = () => {
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">Squad Value</p>
-                    <p className="text-lg font-bold text-foreground">{formatCurrency(budgetUsed)}</p>
+                    <p className="text-lg font-bold text-foreground">{formatCurrency(squadValue)}</p>
                   </div>
                 </CardContent>
               </Card>
 
               <PlayerSearch players={players} onFilterChange={setFilteredPlayers} />
 
-              <TriviaModal draftId={draftId} />
+              <TriviaModal draftId={draftId} onBudgetChange={refreshBudget} />
             </div>
 
             <div className="lg:col-span-6">
@@ -272,14 +276,14 @@ const Index = () => {
                 </div>
                 <div>
                   <div className="text-xl font-bold text-foreground">
-                    {squad.length ? Math.round(squad.reduce((sum, p) => sum + p.overall_rating, 0) / squad.length) : 0}
+                    {squad.length ? Math.round(squad.reduce((sum, p) => sum + p.display_rating, 0) / squad.length) : 0}
                   </div>
                   <p className="text-sm text-muted-foreground">Avg Rating</p>
                 </div>
               </div>
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Total Spent</p>
-                <p className="text-xl font-bold text-foreground">{formatCurrency(budgetUsed)}</p>
+                <p className="text-xl font-bold text-foreground">{formatCurrency(squadValue)}</p>
               </div>
             </div>
           </DialogContent>

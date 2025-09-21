@@ -20,9 +20,10 @@ interface BonusQuestion {
 
 interface TriviaModalProps {
   draftId: string | null;
+  onBudgetChange?: () => void;
 }
 
-export const TriviaModal = ({ draftId }: TriviaModalProps) => {
+export const TriviaModal = ({ draftId, onBudgetChange }: TriviaModalProps) => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState<BonusQuestion | null>(null);
@@ -35,10 +36,20 @@ export const TriviaModal = ({ draftId }: TriviaModalProps) => {
   const fetchRandomQuestion = async () => {
     setLoading(true);
     try {
+      const { count, error: countError } = await supabase
+        .from('bonus_questions')
+        .select('*', { count: 'exact', head: true });
+
+      if (countError || count === null) {
+        throw countError || new Error('Could not count bonus questions');
+      }
+
+      const randomIndex = Math.floor(Math.random() * count);
+
       const { data, error } = await supabase
         .from('bonus_questions')
         .select('*')
-        .limit(1)
+        .range(randomIndex, randomIndex)
         .single();
 
       if (error) throw error;
@@ -99,6 +110,10 @@ export const TriviaModal = ({ draftId }: TriviaModalProps) => {
         .eq('id', draftId);
 
       if (updateError) throw updateError;
+      
+      if (onBudgetChange) {
+        onBudgetChange();
+      }
 
       toast({
         title: correct ? "Correct!" : "Wrong Answer",

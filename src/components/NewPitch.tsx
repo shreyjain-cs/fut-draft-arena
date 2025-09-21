@@ -1,40 +1,31 @@
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FORMATIONS } from '@/lib/formations';
 
 interface DraftedPlayer {
   player_slug: string;
   name: string;
-  overall_rating: number;
   purchase_price: number;
   best_position: string;
   position?: string;
   image?: string;
+  overall_rating: number;
+  original_overall_rating?: number;
+  display_rating: number;
 }
 
 interface NewPitchProps {
   squad: DraftedPlayer[];
+  formation: keyof typeof FORMATIONS;
   onBack: () => void;
 }
 
-const FORMATION = {
-  GK: { top: '85%', left: '50%' },
-  LB: { top: '70%', left: '15%' },
-  CB1: { top: '70%', left: '35%' },
-  CB2: { top: '70%', left: '65%' },
-  RB: { top: '70%', left: '85%' },
-  CM1: { top: '50%', left: '35%' },
-  CM2: { top: '50%', left: '65%' },
-  CAM: { top: '35%', left: '50%' },
-  LW: { top: '20%', left: '15%' },
-  RW: { top: '20%', left: '85%' },
-  ST: { top: '5%', left: '50%' },
-};
-
-export const NewPitch = ({ squad, onBack }: NewPitchProps) => {
+export const NewPitch = ({ squad, formation, onBack }: NewPitchProps) => {
   const getPlayerForPosition = (position: string) => {
-    // This is a simplified logic. In a real app, you'd have a more robust way to assign players to positions.
-    return squad.find(p => p.best_position === position);
+    return squad.find(p => p.position === position);
   };
+
+  const currentFormation = FORMATIONS[formation];
 
   return (
     <div className="relative w-full h-full bg-pitch-dark rounded-lg overflow-hidden shadow-inner shadow-black/50">
@@ -43,7 +34,7 @@ export const NewPitch = ({ squad, onBack }: NewPitchProps) => {
       </Button>
       <div className="absolute inset-0 bg-no-repeat bg-center bg-contain" style={{ backgroundImage: 'url(/pitch-lines.svg)' }}></div>
       <div className="relative w-full h-full">
-        {Object.entries(FORMATION).map(([position, style]) => {
+        {Object.entries(currentFormation).map(([position, style]) => {
           const player = getPlayerForPosition(position);
           return (
             <div
@@ -53,9 +44,9 @@ export const NewPitch = ({ squad, onBack }: NewPitchProps) => {
             >
               {player ? (
                 <div className="relative">
-                  <img src={player.image} alt={player.name} className="w-12 h-12 rounded-full border-2 border-gold" />
+                  <img src={player.image || './placeholder.png'} alt={player.name} className="w-12 h-12 rounded-full border-2 border-gold" />
                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black/50 px-2 py-0.5 rounded-md text-white text-xs font-bold">
-                    {player.name}
+                    {player.name} ({player.display_rating})
                   </div>
                 </div>
               ) : (
