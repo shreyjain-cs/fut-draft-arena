@@ -49,17 +49,18 @@ export const PlayerCard = ({ player, onBuyPlayer, disabled }: PlayerCardProps) =
     <div className={`flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border/50 ${disabled ? 'opacity-50' : 'hover:border-pitch-green/30'} transition-colors`}>
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-xl font-bold text-gray-700 flex-shrink-0">
-          {getInitials(player.full_name)}
+          {getInitials(player.name)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <h4 className="font-semibold text-foreground truncate">
-              {player.full_name}
+              {player.name}
             </h4>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Badge className={`${getRatingColor(player.overall_rating)}`}>{player.overall_rating} OVR</Badge>
             <Badge variant="outline">{player.best_position}</Badge>
+            <span className="text-xs text-muted-foreground">{player.club_name}</span>
           </div>
         </div>
       </div>

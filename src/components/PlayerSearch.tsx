@@ -8,7 +8,6 @@ import { Search } from 'lucide-react';
 interface Player {
   id: number;
   name: string;
-  full_name: string;
   image: string;
   overall_rating: number;
   value: string;
@@ -37,10 +36,10 @@ export const PlayerSearch = ({ players, onFilterChange }: PlayerSearchProps) => 
       const playerValueInMillions = player.value.includes('M') ? playerValue : playerValue / 1000000;
 
       return (
-        player.full_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        player.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
         (player.overall_rating >= ovrRange[0] && player.overall_rating <= ovrRange[1]) &&
         (playerValueInMillions >= valueRange[0] && playerValueInMillions <= valueRange[1]) &&
-        (position === 'all' || player.best_position === position)
+        (position === 'all' || (player.best_position && player.best_position.includes(position)))
       );
     });
     onFilterChange(filtered);
