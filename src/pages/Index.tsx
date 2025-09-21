@@ -11,6 +11,7 @@ import { SquadDisplay } from "@/components/SquadDisplay";
 import { TriviaModal } from "@/components/TriviaModal";
 import { useDraft } from "@/hooks/useDraft";
 import { useToast } from "@/hooks/use-toast";
+import { PlayerSearch } from "@/components/PlayerSearch";
 
 interface Player {
   id: number;
@@ -25,9 +26,18 @@ interface Player {
   country_flag: string;
 }
 
+interface DraftedPlayer {
+  player_slug: string;
+  full_name: string;
+  overall_rating: number;
+  purchase_price: number;
+  position?: string;
+}
+
 const Index = () => {
   const { toast } = useToast();
   const [players, setPlayers] = useState<Player[]>([]);
+  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -35,6 +45,7 @@ const Index = () => {
     draftId,
     purse,
     squad,
+    setSquad,
     isActive,
     startDraft,
     buyPlayer,
@@ -65,10 +76,11 @@ const Index = () => {
         .not('overall_rating', 'is', null)
         .not('value', 'is', null)
         .order('overall_rating', { ascending: false })
-        .limit(50);
+        .limit(250);
 
       if (error) throw error;
       setPlayers(data || []);
+      setFilteredPlayers(data || []);
     } catch (error) {
       toast({
         title: "Error",
@@ -92,6 +104,10 @@ const Index = () => {
   const handleStopDraft = async () => {
     await stopDraft();
     setShowSummary(true);
+  };
+
+  const handleSquadChange = (updatedSquad: DraftedPlayer[]) => {
+    setSquad(updatedSquad);
   };
 
   const formatTime = (seconds: number) => {
@@ -137,7 +153,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -159,7 +174,6 @@ const Index = () => {
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Squad & Budget - Left Column */}
           <div className="lg:col-span-3 space-y-6">
             <Card className="bg-gradient-to-br from-card to-card/80 border-border shadow-[var(--shadow-card)]">
               <CardHeader>
@@ -187,10 +201,11 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            <SquadDisplay squad={squad} onSellPlayer={sellPlayer} />
+            <PlayerSearch players={players} onFilterChange={setFilteredPlayers} />
+
+            <TriviaModal draftId={draftId} />
           </div>
 
-          {/* Player Market - Center Column */}
           <div className="lg:col-span-6">
             <Card className="h-full bg-card border-border shadow-[var(--shadow-card)]">
               <CardHeader>
@@ -206,12 +221,12 @@ const Index = () => {
                     <p className="text-muted-foreground mt-2">Loading players...</p>
                   </div>
                 ) : (
-                  <div className="grid gap-4 max-h-[calc(100vh-300px)] overflow-y-auto">
-                    {players.map((player) => (
+                  <div className="grid gap-4 max-h-[calc(100vh-230px)] overflow-y-auto p-1">
+                    {filteredPlayers.map((player) => (
                       <PlayerCard
                         key={player.id}
                         player={player}
-                        onBuyPlayer={(player) => buyPlayer(player)}
+                        onBuyPlayer={buyPlayer}
                         disabled={squad.some(p => p.full_name === player.full_name)}
                       />
                     ))}
@@ -221,14 +236,12 @@ const Index = () => {
             </Card>
           </div>
 
-          {/* Controls & Trivia - Right Column */}
           <div className="lg:col-span-3">
-            <TriviaModal draftId={draftId} />
+            <SquadDisplay squad={squad} onSellPlayer={sellPlayer} onSquadChange={handleSquadChange} />
           </div>
         </div>
       </div>
 
-      {/* Summary Modal */}
       <Dialog open={showSummary} onOpenChange={setShowSummary}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
