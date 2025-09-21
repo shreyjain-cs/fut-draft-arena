@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Trash2, Shield, LayoutGrid, List } from "lucide-react";
+import { Users, Trash2, Shield, LayoutGrid, List, Star } from "lucide-react";
 import { NewPitch } from '@/components/NewPitch';
 import { formationOptions, FORMATIONS } from '@/lib/formations';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GameMode } from "@/hooks/useDraft";
 
 interface DraftedPlayer {
   player_slug: string;
@@ -24,9 +25,11 @@ interface SquadDisplayProps {
   onSellPlayer: (playerSlug: string) => void;
   formation: keyof typeof FORMATIONS;
   setFormation: (formation: keyof typeof FORMATIONS) => void;
+  gameMode: GameMode;
+  targetOvr: number;
 }
 
-export const SquadDisplay = ({ squad, onSellPlayer, formation, setFormation }: SquadDisplayProps) => {
+export const SquadDisplay = ({ squad, onSellPlayer, formation, setFormation, gameMode, targetOvr }: SquadDisplayProps) => {
   const [view, setView] = useState('list');
 
   const formatCurrency = (amount: number) => {
@@ -73,6 +76,16 @@ export const SquadDisplay = ({ squad, onSellPlayer, formation, setFormation }: S
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {gameMode === 'wildcard' && (
+          <div className="text-center p-4 mb-4 bg-muted rounded-lg border border-dashed border-pitch-green">
+            <h3 className="text-lg font-semibold text-foreground flex items-center justify-center gap-2">
+              <Star className="w-5 h-5 text-gold" />
+              Wildcard Objective
+            </h3>
+            <p className="text-muted-foreground">Build a squad with an average rating of:</p>
+            <p className="text-4xl font-bold text-pitch-green">{targetOvr}</p>
+          </div>
+        )}
         {view === 'list' ? (
           squad.length === 0 ? (
             <div className="text-center py-8">

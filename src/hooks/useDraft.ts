@@ -29,6 +29,8 @@ interface DraftedPlayer {
   display_rating: number;
 }
 
+export type GameMode = 'classic' | 'wildcard';
+
 export const useDraft = () => {
   const { toast } = useToast();
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -37,6 +39,9 @@ export const useDraft = () => {
   const [isActive, setIsActive] = useState(false);
   const [bonusMoney, setBonusMoney] = useState(0);
   const [formation, setFormation] = useState<keyof typeof FORMATIONS>('4-3-3');
+  const [gameMode, setGameMode] = useState<GameMode>('classic');
+  const [targetOvr, setTargetOvr] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(300);
 
   const assignPositions = useCallback((squad: DraftedPlayer[], formation: keyof typeof FORMATIONS) => {
     let playersToProcess = squad.map(p => ({
@@ -107,16 +112,67 @@ export const useDraft = () => {
     }
   }, [draftId, toast]);
 
-  const startDraft = useCallback(async () => {
+  const stopDraft = useCallback(async (username?: string) => {
+    if (draftId) {
+      try {
+        const finalScore = purse + bonusMoney;
+        const { error } = await supabase
+          .from('drafts')
+          .update({ draft_active: false, end_time: new Date().toISOString() })
+          .eq('id', draftId);
+        if (error) throw error;
+
+        // Save to leaderboard
+        if (username) {
+          const { error: leaderboardError } = await supabase
+            .from('leaderboard')
+            .insert([{ username, score: finalScore }]);
+          if (leaderboardError) throw leaderboardError;
+        }
+
+        setIsActive(false);
+      } catch (error) {
+        toast({ title: "Error stopping draft", variant: "destructive" });
+      }
+    }
+  }, [draftId, toast, purse, bonusMoney]);
+
+  useEffect(() => {
+    if (isActive && gameMode === 'wildcard') {
+      const timer = setInterval(() => {
+        setTimeLeft(prevTime => {
+          if (prevTime <= 1) {
+            clearInterval(timer);
+            stopDraft('Wildcard Player');
+            return 0;
+          }
+          return prevTime - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [isActive, gameMode, stopDraft]);
+
+  const startDraft = useCallback(async (mode: GameMode) => {
+    setGameMode(mode);
+    let initialPurse = 500000000;
+
+    if (mode === 'wildcard') {
+      const randomOvr = Math.floor(Math.random() * (88 - 80 + 1)) + 80;
+      setTargetOvr(randomOvr);
+      initialPurse = 1000000000;
+      setTimeLeft(300);
+    }
+
     try {
       const { data, error } = await supabase
         .from('drafts')
-        .insert([{ purse: 500000000 }])
+        .insert([{ purse: initialPurse }])
         .select();
       if (error) throw error;
       const newDraftId = data[0].id;
       setDraftId(newDraftId);
-      setPurse(500000000);
+      setPurse(initialPurse);
       setSquad([]);
       setIsActive(true);
       setBonusMoney(0);
@@ -124,6 +180,17 @@ export const useDraft = () => {
       toast({ title: "Error starting draft", variant: "destructive" });
     }
   }, [toast]);
+
+  const resetDraft = useCallback(() => {
+    setDraftId(null);
+    setIsActive(false);
+    setSquad([]);
+    setPurse(500000000);
+    setGameMode('classic');
+    setTargetOvr(0);
+    setTimeLeft(300);
+    setBonusMoney(0);
+  }, []);
 
   const canBuyPlayer = useCallback((player: Player): boolean => {
     if (squad.some(p => p.player_slug === player.name)) {
@@ -250,28 +317,5 @@ export const useDraft = () => {
     setBonusMoney(prev => prev + amount);
   }, []);
 
-  const stopDraft = useCallback(async (username: string) => {
-    if (draftId) {
-      try {
-        const finalScore = purse + bonusMoney;
-        const { error } = await supabase
-          .from('drafts')
-          .update({ draft_active: false, end_time: new Date().toISOString() })
-          .eq('id', draftId);
-        if (error) throw error;
-
-        // Save to leaderboard
-        const { error: leaderboardError } = await supabase
-          .from('leaderboard')
-          .insert([{ username, score: finalScore }]);
-        if (leaderboardError) throw leaderboardError;
-
-        setIsActive(false);
-      } catch (error) {
-        toast({ title: "Error stopping draft", variant: "destructive" });
-      }
-    }
-  }, [draftId, toast, purse, bonusMoney]);
-
-  return { draftId, purse, squad, setSquad, isActive, startDraft, buyPlayer, sellPlayer, stopDraft, refreshBudget, bonusMoney, addBonusMoney, formation, setFormation, canBuyPlayer };
+  return { draftId, purse, squad, setSquad, isActive, startDraft, buyPlayer, sellPlayer, stopDraft, refreshBudget, bonusMoney, addBonusMoney, formation, setFormation, canBuyPlayer, gameMode, targetOvr, timeLeft, resetDraft };
 };

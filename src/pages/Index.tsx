@@ -5,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Timer, Trophy, Users, Coins } from "lucide-react";
+import { Timer, Trophy, Users, Coins, Star, ArrowLeft } from "lucide-react";
 import { PlayerCard } from "@/components/PlayerCard";
 import { SquadDisplay } from "@/components/SquadDisplay";
 import { TriviaModal } from "@/components/TriviaModal";
-import { useDraft } from "@/hooks/useDraft";
+import { useDraft, GameMode } from "@/hooks/useDraft";
 import { useToast } from "@/hooks/use-toast";
 import { PlayerSearch } from "@/components/PlayerSearch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -57,7 +57,11 @@ const Index = () => {
     refreshBudget,
     formation,
     setFormation,
-    canBuyPlayer
+    canBuyPlayer,
+    gameMode,
+    targetOvr,
+    timeLeft,
+    resetDraft
   } = useDraft();
 
   useEffect(() => {
@@ -65,14 +69,20 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
+    if (!isActive && draftId) {
+      setShowSummary(true);
+    }
+  }, [isActive, draftId]);
+
+  useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isActive) {
+    if (isActive && gameMode === 'classic') {
       interval = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, [isActive, gameMode]);
 
   const fetchPlayers = async () => {
     setLoading(true);
@@ -99,9 +109,10 @@ const Index = () => {
     }
   };
 
-  const handleStartDraft = async () => {
-    await startDraft();
+  const handleStartDraft = async (mode: GameMode) => {
+    await startDraft(mode);
     setElapsedTime(0);
+    setShowSummary(false);
     toast({
       title: "Draft Started!",
       description: "Build your dream team within budget",
@@ -109,8 +120,7 @@ const Index = () => {
   };
 
   const handleStopDraft = async () => {
-    await stopDraft();
-    setShowSummary(true);
+    await stopDraft('Classic Player');
   };
 
   const formatTime = (seconds: number) => {
@@ -120,10 +130,10 @@ const Index = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return `€${(amount / 1000000).toFixed(1)}M`;
+    return `€${(amount / 1000000000).toFixed(2)}B`;
   };
 
-  const maxBudget = 500000000;
+  const maxBudget = gameMode === 'classic' ? 500000000 : 1000000000;
   const squadValue = squad.reduce((sum, p) => sum + p.purchase_price, 0);
   const budgetProgress = (squadValue / maxBudget) * 100;
 
@@ -137,16 +147,25 @@ const Index = () => {
             </div>
             <div>
               <CardTitle className="text-2xl font-bold text-foreground mb-2">FutDraft Auction</CardTitle>
-              <p className="text-muted-foreground">Build your dream football team within a €500M budget</p>
+              <p className="text-muted-foreground">Choose your game mode</p>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid grid-cols-1 gap-4">
             <Button 
-              onClick={handleStartDraft} 
+              onClick={() => handleStartDraft('classic')} 
               size="lg" 
               className="w-full bg-gradient-to-r from-pitch-green to-pitch-dark hover:from-pitch-dark hover:to-pitch-green text-primary-foreground font-semibold"
             >
-              Start Draft
+              Classic Mode
+            </Button>
+            <Button 
+              onClick={() => handleStartDraft('wildcard')} 
+              size="lg" 
+              variant="outline"
+              className="w-full border-pitch-green text-pitch-green hover:bg-pitch-green/10 font-semibold"
+            >
+              <Star className="w-4 h-4 mr-2" />
+              Fut Draft Wildcard
             </Button>
           </CardContent>
         </Card>
@@ -160,15 +179,18 @@ const Index = () => {
         <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <Button variant="outline" size="icon" onClick={resetDraft}>
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
               <h1 className="text-2xl font-bold text-foreground">FutDraft Auction</h1>
               {isActive && (
                 <Badge variant="default" className="bg-gradient-to-r from-pitch-green to-pitch-dark">
                   <Timer className="w-4 h-4 mr-1" />
-                  {formatTime(elapsedTime)}
+                  {gameMode === 'classic' ? formatTime(elapsedTime) : formatTime(timeLeft)}
                 </Badge>
               )}
             </div>
-            {isActive && (
+            {isActive && gameMode === 'classic' && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div style={{ pointerEvents: squad.length < 11 ? 'none' : 'auto' }}>
@@ -205,8 +227,8 @@ const Index = () => {
                     </div>
                     <Progress value={budgetProgress} className="h-2" />
                     <div className="flex justify-between text-xs mt-1 text-muted-foreground">
-                      <span>€0M</span>
-                      <span>€500M</span>
+                      <span>€0B</span>
+                      <span>{gameMode === 'classic' ? '€0.5B' : '€1B'}</span>
                     </div>
                   </div>
                   <div className="text-center">
@@ -218,7 +240,7 @@ const Index = () => {
 
               <PlayerSearch players={players} onFilterChange={setFilteredPlayers} />
 
-              <TriviaModal draftId={draftId} onBudgetChange={refreshBudget} />
+              {gameMode === 'classic' && <TriviaModal draftId={draftId} onBudgetChange={refreshBudget} />}
             </div>
 
             <div className="lg:col-span-6">
@@ -252,7 +274,7 @@ const Index = () => {
             </div>
 
             <div className="lg:col-span-3">
-              <SquadDisplay squad={squad} onSellPlayer={sellPlayer} formation={formation} setFormation={setFormation} />
+              <SquadDisplay squad={squad} onSellPlayer={sellPlayer} formation={formation} setFormation={setFormation} gameMode={gameMode} targetOvr={targetOvr} />
             </div>
           </div>
         </div>
@@ -264,7 +286,7 @@ const Index = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div className="text-center">
-                <div className="text-3xl font-bold text-pitch-green">{formatTime(elapsedTime)}</div>
+                <div className="text-3xl font-bold text-pitch-green">{formatTime(gameMode === 'classic' ? elapsedTime : 300 - timeLeft)}</div>
                 <p className="text-muted-foreground">Total Draft Time</p>
               </div>
               <div className="grid grid-cols-2 gap-4 text-center">
