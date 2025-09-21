@@ -1,5 +1,4 @@
-
-const FORWARDS = ['ST', 'CF'];
+const FORWARDS = ['ST', 'CF', 'LST', 'RST'];
 const WINGERS_R = ['RW', 'RM'];
 const WINGERS_L = ['LW', 'LM'];
 const ALL_MIDS = ['CAM', 'CM', 'LCM', 'RCM', 'CDM', 'RDM', 'LDM'];
@@ -9,6 +8,8 @@ export const POSITION_GROUPS = {
   // Forwards
   ST: FORWARDS,
   CF: FORWARDS,
+  LST: FORWARDS,
+  RST: FORWARDS,
 
   // Wingers
   RW: WINGERS_R,
@@ -33,7 +34,7 @@ export const POSITION_GROUPS = {
   LB: DEFENDERS,
 };
 
-export const isForward = (pos: string) => ['ST', 'CF', 'RW', 'LW'].includes(pos);
+export const isForward = (pos: string) => ['ST', 'CF', 'RW', 'LW', 'LST', 'RST'].includes(pos);
 export const isMidfielder = (pos: string) => [
   'CAM', 'CM', 'CDM', 'RM', 'LM', 'LCM', 'RCM', 'RDM', 'LDM'
 ].includes(pos);

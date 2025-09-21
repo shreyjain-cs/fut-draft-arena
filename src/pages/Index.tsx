@@ -49,13 +49,15 @@ const Index = () => {
     draftId,
     purse,
     squad,
-    setSquad,
     isActive,
     startDraft,
     buyPlayer,
     sellPlayer,
     stopDraft,
-    refreshBudget
+    refreshBudget,
+    formation,
+    setFormation,
+    canBuyPlayer
   } = useDraft();
 
   useEffect(() => {
@@ -110,10 +112,6 @@ const Index = () => {
     await stopDraft();
     setShowSummary(true);
   };
-
-  const handleSquadChange = useCallback((updatedSquad: DraftedPlayer[]) => {
-    setSquad(updatedSquad);
-  }, [setSquad]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -244,7 +242,7 @@ const Index = () => {
                           key={player.id}
                           player={player}
                           onBuyPlayer={buyPlayer}
-                          disabled={squad.some(p => p.player_slug === player.name)}
+                          disabled={squad.some(p => p.player_slug === player.name) || !canBuyPlayer(player)}
                         />
                       ))}
                     </div>
@@ -254,7 +252,7 @@ const Index = () => {
             </div>
 
             <div className="lg:col-span-3">
-              <SquadDisplay squad={squad} onSellPlayer={sellPlayer} onSquadChange={handleSquadChange} />
+              <SquadDisplay squad={squad} onSellPlayer={sellPlayer} formation={formation} setFormation={setFormation} />
             </div>
           </div>
         </div>

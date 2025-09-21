@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { isDefender, isMidfielder, isForward } from "@/lib/position-groups";
+import { isDefender, isMidfielder, isForward, POSITION_GROUPS } from "@/lib/position-groups";
+import { FORMATIONS } from "@/lib/formations";
 
 interface Player {
   id: number;
@@ -28,10 +29,6 @@ interface DraftedPlayer {
   display_rating: number;
 }
 
-const MAX_DEFENDERS = 4;
-const MAX_MIDFIELDERS = 4;
-const MAX_FORWARDS = 3;
-
 export const useDraft = () => {
   const { toast } = useToast();
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -39,6 +36,59 @@ export const useDraft = () => {
   const [squad, setSquad] = useState<DraftedPlayer[]>([]);
   const [isActive, setIsActive] = useState(false);
   const [bonusMoney, setBonusMoney] = useState(0);
+  const [formation, setFormation] = useState<keyof typeof FORMATIONS>('4-3-3');
+
+  const assignPositions = useCallback((squad: DraftedPlayer[], formation: keyof typeof FORMATIONS) => {
+    let playersToProcess = squad.map(p => ({
+      ...p,
+      position: undefined,
+      display_rating: p.original_overall_rating || p.overall_rating,
+    }));
+    let availablePositions = Object.keys(FORMATIONS[formation]);
+    const assignedPlayers: DraftedPlayer[] = [];
+
+    // First pass: assign players to their best positions
+    const unassignedAfterFirstPass: DraftedPlayer[] = [];
+    playersToProcess.forEach(player => {
+      const bestPos = player.best_position.split(', ')[0];
+      const positionIndex = availablePositions.indexOf(bestPos);
+
+      if (positionIndex !== -1) {
+        player.position = bestPos;
+        player.display_rating = player.original_overall_rating || player.overall_rating;
+        assignedPlayers.push(player);
+        availablePositions.splice(positionIndex, 1);
+      } else {
+        unassignedAfterFirstPass.push(player);
+      }
+    });
+
+    // Second pass: assign remaining players to alternative positions
+    const unassignedAfterSecondPass: DraftedPlayer[] = [];
+    unassignedAfterFirstPass.forEach(player => {
+      const bestPos = player.best_position.split(', ')[0];
+      const alternativePositions = POSITION_GROUPS[bestPos as keyof typeof POSITION_GROUPS] || [];
+      let isAssigned = false;
+
+      for (const altPos of alternativePositions) {
+        const positionIndex = availablePositions.indexOf(altPos);
+        if (positionIndex !== -1) {
+          player.position = altPos;
+          player.display_rating = Math.round((player.original_overall_rating || player.overall_rating) * 0.9);
+          assignedPlayers.push(player);
+          availablePositions.splice(positionIndex, 1);
+          isAssigned = true;
+          break;
+        }
+      }
+      if (!isAssigned) {
+        unassignedAfterSecondPass.push(player);
+      }
+    });
+
+    return [...assignedPlayers, ...unassignedAfterSecondPass].sort((a,b) => (squad.findIndex(p => p.player_slug === a.player_slug)) - (squad.findIndex(p => p.player_slug === b.player_slug)));
+  }, []);
+
 
   const refreshBudget = useCallback(async () => {
     if (!draftId) return;
@@ -75,43 +125,60 @@ export const useDraft = () => {
     }
   }, [toast]);
 
-  const buyPlayer = useCallback(async (player: Player) => {
+  const canBuyPlayer = useCallback((player: Player): boolean => {
     if (squad.some(p => p.player_slug === player.name)) {
-      toast({ title: "Player already in squad", variant: "destructive" });
-      return;
+      return false;
+    }
+    if (squad.length >= 11) {
+      return false;
     }
 
+    const newPlayer: DraftedPlayer = {
+      player_slug: player.name,
+      name: player.name,
+      overall_rating: player.overall_rating,
+      original_overall_rating: player.overall_rating,
+      display_rating: player.overall_rating,
+      purchase_price: 0,
+      best_position: player.best_position,
+    };
+
+    const tempSquad = [...squad, newPlayer];
+    const assignedSquad = assignPositions(tempSquad, formation);
+    const newPlayerInAssignedSquad = assignedSquad.find(p => p.player_slug === newPlayer.player_slug);
+
+    if (!newPlayerInAssignedSquad || !newPlayerInAssignedSquad.position) {
+      return false;
+    }
+
+    const formationPositions = Object.keys(FORMATIONS[formation]);
+    const maxDefenders = formationPositions.filter(p => isDefender(p)).length;
+    const maxMidfielders = formationPositions.filter(p => isMidfielder(p)).length;
+    const maxForwards = formationPositions.filter(p => isForward(p)).length;
+
+    const numDefenders = assignedSquad.filter(p => p.position && isDefender(p.position)).length;
+    const numMidfielders = assignedSquad.filter(p => p.position && isMidfielder(p.position)).length;
+    const numForwards = assignedSquad.filter(p => p.position && isForward(p.position)).length;
+
+    if (numDefenders > maxDefenders) return false;
+    if (numMidfielders > maxMidfielders) return false;
+    if (numForwards > maxForwards) return false;
+
+    return true;
+  }, [squad, formation, assignPositions]);
+
+  const buyPlayer = useCallback(async (player: Player) => {
     const price = parseFloat(player.value.replace(/[^0-9.]/g, '')) * (player.value.includes('M') ? 1000000 : 1);
     if (purse < price) {
       toast({ title: "Not enough funds", variant: "destructive" });
       return;
     }
-    if (squad.length >= 11) {
-      toast({ title: "Squad is full", variant: "destructive" });
+    
+    if (!canBuyPlayer(player)) {
+      toast({ title: "Cannot add player", description: "No available slot for this player in your formation.", variant: "destructive" });
       return;
     }
 
-    const numDefenders = squad.filter(p => isDefender(p.best_position)).length;
-    const numMidfielders = squad.filter(p => isMidfielder(p.best_position)).length;
-    const numForwards = squad.filter(p => isForward(p.best_position)).length;
-
-    if (isDefender(player.best_position) && numDefenders >= MAX_DEFENDERS) {
-      toast({ title: "You can't have more than 4 defenders", variant: "destructive" });
-      return;
-    }
-
-    if (isMidfielder(player.best_position) && numMidfielders >= MAX_MIDFIELDERS) {
-      toast({ title: "You can't have more than 4 midfielders", variant: "destructive" });
-      return;
-    }
-
-    if (isForward(player.best_position) && numForwards >= MAX_FORWARDS) {
-      toast({ title: "You can't have more than 3 forwards", variant: "destructive" });
-      return;
-    }
-
-
-    const newPurse = purse - price;
     const newPlayer: DraftedPlayer = {
       player_slug: player.name,
       name: player.name,
@@ -121,15 +188,18 @@ export const useDraft = () => {
       purchase_price: price,
       best_position: player.best_position,
     };
-    const newSquad = [...squad, newPlayer];
 
+    const tempSquad = [...squad, newPlayer];
+    const assignedSquad = assignPositions(tempSquad, formation);
+
+    const newPurse = purse - price;
     setPurse(newPurse);
-    setSquad(newSquad);
+    setSquad(assignedSquad);
 
     try {
       const { error } = await supabase
         .from('drafts')
-        .update({ purse: newPurse, squad: newSquad })
+        .update({ purse: newPurse, squad: assignedSquad })
         .eq('id', draftId);
       if (error) throw error;
 
@@ -140,7 +210,7 @@ export const useDraft = () => {
       setPurse(purse);
       setSquad(squad);
     }
-  }, [draftId, purse, squad, toast]);
+  }, [draftId, purse, squad, toast, formation, assignPositions, canBuyPlayer]);
 
   const sellPlayer = useCallback(async (playerSlug: string) => {
     const playerToSell = squad.find(p => p.player_slug === playerSlug);
@@ -148,14 +218,15 @@ export const useDraft = () => {
 
     const newPurse = purse + playerToSell.purchase_price;
     const newSquad = squad.filter(p => p.player_slug !== playerSlug);
+    const assignedSquad = assignPositions(newSquad, formation);
 
     setPurse(newPurse);
-    setSquad(newSquad);
+    setSquad(assignedSquad);
 
     try {
       const { error } = await supabase
         .from('drafts')
-        .update({ purse: newPurse, squad: newSquad })
+        .update({ purse: newPurse, squad: assignedSquad })
         .eq('id', draftId);
       if (error) throw error;
 
@@ -165,7 +236,15 @@ export const useDraft = () => {
       setPurse(purse);
       setSquad(squad);
     }
-  }, [draftId, purse, squad, toast]);
+  }, [draftId, purse, squad, toast, formation, assignPositions]);
+
+  useEffect(() => {
+    const newSquad = assignPositions(squad, formation);
+    if (JSON.stringify(newSquad) !== JSON.stringify(squad)) {
+      setSquad(newSquad);
+    }
+  }, [formation, assignPositions, squad]);
+
 
   const addBonusMoney = useCallback((amount: number) => {
     setBonusMoney(prev => prev + amount);
@@ -194,5 +273,5 @@ export const useDraft = () => {
     }
   }, [draftId, toast, purse, bonusMoney]);
 
-  return { draftId, purse, squad, setSquad, isActive, startDraft, buyPlayer, sellPlayer, stopDraft, refreshBudget, bonusMoney, addBonusMoney };
+  return { draftId, purse, squad, setSquad, isActive, startDraft, buyPlayer, sellPlayer, stopDraft, refreshBudget, bonusMoney, addBonusMoney, formation, setFormation, canBuyPlayer };
 };

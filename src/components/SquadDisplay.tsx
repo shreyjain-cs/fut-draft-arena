@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Trash2, Shield, LayoutGrid, List } from "lucide-react";
 import { NewPitch } from '@/components/NewPitch';
 import { formationOptions, FORMATIONS } from '@/lib/formations';
-import { POSITION_GROUPS } from '@/lib/position-groups';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface DraftedPlayer {
@@ -23,73 +22,12 @@ interface DraftedPlayer {
 interface SquadDisplayProps {
   squad: DraftedPlayer[];
   onSellPlayer: (playerSlug: string) => void;
-  onSquadChange: (squad: DraftedPlayer[]) => void;
+  formation: keyof typeof FORMATIONS;
+  setFormation: (formation: keyof typeof FORMATIONS) => void;
 }
 
-export const SquadDisplay = ({ squad, onSellPlayer, onSquadChange }: SquadDisplayProps) => {
+export const SquadDisplay = ({ squad, onSellPlayer, formation, setFormation }: SquadDisplayProps) => {
   const [view, setView] = useState('list');
-  const [formation, setFormation] = useState<keyof typeof FORMATIONS>('4-3-3');
-
-  useEffect(() => {
-    const assignPositions = () => {
-      let playersToProcess = squad.map(p => ({
-        ...p,
-        position: undefined,
-        display_rating: p.original_overall_rating || p.overall_rating,
-      }));
-      let availablePositions = Object.keys(FORMATIONS[formation]);
-      const assignedPlayers: DraftedPlayer[] = [];
-
-      // First pass: assign players to their best positions
-      const unassignedAfterFirstPass: DraftedPlayer[] = [];
-      playersToProcess.forEach(player => {
-        const bestPos = player.best_position.split(', ')[0];
-        const positionIndex = availablePositions.indexOf(bestPos);
-
-        if (positionIndex !== -1) {
-          player.position = bestPos;
-          player.display_rating = player.original_overall_rating || player.overall_rating;
-          assignedPlayers.push(player);
-          availablePositions.splice(positionIndex, 1);
-        } else {
-          unassignedAfterFirstPass.push(player);
-        }
-      });
-
-      // Second pass: assign remaining players to alternative positions
-      const unassignedAfterSecondPass: DraftedPlayer[] = [];
-      unassignedAfterFirstPass.forEach(player => {
-        const bestPos = player.best_position.split(', ')[0];
-        const alternativePositions = POSITION_GROUPS[bestPos as keyof typeof POSITION_GROUPS] || [];
-        let isAssigned = false;
-
-        for (const altPos of alternativePositions) {
-          const positionIndex = availablePositions.indexOf(altPos);
-          if (positionIndex !== -1) {
-            player.position = altPos;
-            player.display_rating = Math.round((player.original_overall_rating || player.overall_rating) * 0.9);
-            assignedPlayers.push(player);
-            availablePositions.splice(positionIndex, 1);
-            isAssigned = true;
-            break;
-          }
-        }
-        if (!isAssigned) {
-          unassignedAfterSecondPass.push(player);
-        }
-      });
-
-      const finalSquad = [...assignedPlayers, ...unassignedAfterSecondPass].sort((a,b) => (squad.findIndex(p => p.player_slug === a.player_slug)) - (squad.findIndex(p => p.player_slug === b.player_slug)));
-      
-      const squadChanged = JSON.stringify(squad) !== JSON.stringify(finalSquad);
-
-      if (squadChanged) {
-        onSquadChange(finalSquad);
-      }
-    };
-    
-    assignPositions();
-  }, [squad, formation, onSquadChange]);
 
   const formatCurrency = (amount: number) => {
     return `€${(amount / 1000000).toFixed(1)}M`;
@@ -167,7 +105,7 @@ export const SquadDisplay = ({ squad, onSellPlayer, onSquadChange }: SquadDispla
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                    <Badge variant="outline">{player.best_position}</Badge>
+                    <Badge variant="outline">{player.position || player.best_position}</Badge>
                     <Button
                       size="sm"
                       variant="ghost"
