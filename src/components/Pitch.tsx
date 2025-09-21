@@ -13,9 +13,10 @@ interface DraftedPlayer {
 interface PlayerProps {
   player: DraftedPlayer;
   isOutOfPosition: boolean;
+  position: string;
 }
 
-const Player = ({ player, isOutOfPosition }: PlayerProps) => {
+const Player = ({ player, isOutOfPosition, position }: PlayerProps) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'player',
     item: { id: player.player_slug },
@@ -30,8 +31,8 @@ const Player = ({ player, isOutOfPosition }: PlayerProps) => {
     <div
       ref={drag}
       className={`relative flex flex-col items-center justify-center w-16 h-20 p-1 rounded-lg shadow-lg cursor-move ${isDragging ? 'opacity-50' : ''}`}>
-      <div className="w-10 h-10 rounded-full bg-gray-200 mb-1 overflow-hidden">
-        {/* Player image would go here */}
+      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-lg font-bold text-gray-700 mb-1">
+        {position}
       </div>
       <p className="text-xs font-bold text-white truncate w-full text-center">{player.full_name}</p>
       <div className={`absolute top-0 right-0 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center ${isOutOfPosition ? 'bg-red-500' : 'bg-blue-500'}`}>{ovr}</div>
@@ -57,7 +58,7 @@ const PositionBox = ({ position, player, onPlayerMove, isOutOfPosition }: Positi
 
   return (
     <div ref={drop} className={`absolute w-20 h-24 flex items-center justify-center ${isOver ? 'bg-green-500/50' : ''}`}>
-      {player ? <Player player={player} isOutOfPosition={isOutOfPosition} /> : <p className="text-white/50 text-sm font-bold">{position}</p>}
+      {player ? <Player player={player} isOutOfPosition={isOutOfPosition} position={position} /> : <p className="text-white/50 text-sm font-bold">{position}</p>}
     </div>
   );
 };

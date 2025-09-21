@@ -12,6 +12,7 @@ import { TriviaModal } from "@/components/TriviaModal";
 import { useDraft } from "@/hooks/useDraft";
 import { useToast } from "@/hooks/use-toast";
 import { PlayerSearch } from "@/components/PlayerSearch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Player {
   id: number;
@@ -152,126 +153,139 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-foreground">FutDraft Auction</h1>
+    <TooltipProvider>
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold text-foreground">FutDraft Auction</h1>
+              {isActive && (
+                <Badge variant="default" className="bg-gradient-to-r from-pitch-green to-pitch-dark">
+                  <Timer className="w-4 h-4 mr-1" />
+                  {formatTime(elapsedTime)}
+                </Badge>
+              )}
+            </div>
             {isActive && (
-              <Badge variant="default" className="bg-gradient-to-r from-pitch-green to-pitch-dark">
-                <Timer className="w-4 h-4 mr-1" />
-                {formatTime(elapsedTime)}
-              </Badge>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div style={{ pointerEvents: squad.length < 11 ? 'none' : 'auto' }}>
+                    <Button onClick={handleStopDraft} variant="destructive" disabled={squad.length < 11}>
+                      Stop Draft
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                {squad.length < 11 && (
+                  <TooltipContent>
+                    <p>You need at least 11 players to stop the draft.</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
             )}
           </div>
-          {isActive && (
-            <Button onClick={handleStopDraft} variant="destructive">
-              Stop Draft
-            </Button>
-          )}
-        </div>
-      </header>
+        </header>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-3 space-y-6">
-            <Card className="bg-gradient-to-br from-card to-card/80 border-border shadow-[var(--shadow-card)]">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                  <Coins className="w-5 h-5 text-gold" />
-                  Budget
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+        <div className="container mx-auto px-4 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-3 space-y-6">
+              <Card className="bg-gradient-to-br from-card to-card/80 border-border shadow-[var(--shadow-card)]">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Coins className="w-5 h-5 text-gold" />
+                    Budget
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">Remaining</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(purse)}</span>
+                    </div>
+                    <Progress value={budgetProgress} className="h-2" />
+                    <div className="flex justify-between text-xs mt-1 text-muted-foreground">
+                      <span>€0M</span>
+                      <span>€500M</span>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">Squad Value</p>
+                    <p className="text-lg font-bold text-foreground">{formatCurrency(budgetUsed)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <PlayerSearch players={players} onFilterChange={setFilteredPlayers} />
+
+              <TriviaModal draftId={draftId} />
+            </div>
+
+            <div className="lg:col-span-6">
+              <Card className="h-full bg-card border-border shadow-[var(--shadow-card)]">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Users className="w-5 h-5 text-pitch-green" />
+                    Player Market
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin w-8 h-8 border-2 border-pitch-green border-t-transparent rounded-full mx-auto"></div>
+                      <p className="text-muted-foreground mt-2">Loading players...</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 max-h-[calc(100vh-230px)] overflow-y-auto p-1">
+                      {filteredPlayers.map((player) => (
+                        <PlayerCard
+                          key={player.id}
+                          player={player}
+                          onBuyPlayer={buyPlayer}
+                          disabled={squad.some(p => p.full_name === player.full_name)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="lg:col-span-3">
+              <SquadDisplay squad={squad} onSellPlayer={sellPlayer} onSquadChange={handleSquadChange} />
+            </div>
+          </div>
+        </div>
+
+        <Dialog open={showSummary} onOpenChange={setShowSummary}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">Draft Complete!</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-pitch-green">{formatTime(elapsedTime)}</div>
+                <p className="text-muted-foreground">Total Draft Time</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-center">
                 <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted-foreground">Remaining</span>
-                    <span className="font-semibold text-foreground">{formatCurrency(purse)}</span>
-                  </div>
-                  <Progress value={budgetProgress} className="h-2" />
-                  <div className="flex justify-between text-xs mt-1 text-muted-foreground">
-                    <span>€0M</span>
-                    <span>€500M</span>
-                  </div>
+                  <div className="text-xl font-bold text-foreground">{squad.length}</div>
+                  <p className="text-sm text-muted-foreground">Players</p>
                 </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Squad Value</p>
-                  <p className="text-lg font-bold text-foreground">{formatCurrency(budgetUsed)}</p>
+                <div>
+                  <div className="text-xl font-bold text-foreground">
+                    {squad.length ? Math.round(squad.reduce((sum, p) => sum + p.overall_rating, 0) / squad.length) : 0}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Avg Rating</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <PlayerSearch players={players} onFilterChange={setFilteredPlayers} />
-
-            <TriviaModal draftId={draftId} />
-          </div>
-
-          <div className="lg:col-span-6">
-            <Card className="h-full bg-card border-border shadow-[var(--shadow-card)]">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                  <Users className="w-5 h-5 text-pitch-green" />
-                  Player Market
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin w-8 h-8 border-2 border-pitch-green border-t-transparent rounded-full mx-auto"></div>
-                    <p className="text-muted-foreground mt-2">Loading players...</p>
-                  </div>
-                ) : (
-                  <div className="grid gap-4 max-h-[calc(100vh-230px)] overflow-y-auto p-1">
-                    {filteredPlayers.map((player) => (
-                      <PlayerCard
-                        key={player.id}
-                        player={player}
-                        onBuyPlayer={buyPlayer}
-                        disabled={squad.some(p => p.full_name === player.full_name)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="lg:col-span-3">
-            <SquadDisplay squad={squad} onSellPlayer={sellPlayer} onSquadChange={handleSquadChange} />
-          </div>
-        </div>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Total Spent</p>
+                <p className="text-xl font-bold text-foreground">{formatCurrency(budgetUsed)}</p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      <Dialog open={showSummary} onOpenChange={setShowSummary}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Draft Complete!</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-pitch-green">{formatTime(elapsedTime)}</div>
-              <p className="text-muted-foreground">Total Draft Time</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div>
-                <div className="text-xl font-bold text-foreground">{squad.length}</div>
-                <p className="text-sm text-muted-foreground">Players</p>
-              </div>
-              <div>
-                <div className="text-xl font-bold text-foreground">
-                  {squad.length ? Math.round(squad.reduce((sum, p) => sum + p.overall_rating, 0) / squad.length) : 0}
-                </div>
-                <p className="text-sm text-muted-foreground">Avg Rating</p>
-              </div>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">Total Spent</p>
-              <p className="text-xl font-bold text-foreground">{formatCurrency(budgetUsed)}</p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </TooltipProvider>
   );
 };
 

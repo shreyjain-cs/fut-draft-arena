@@ -36,11 +36,20 @@ export const PlayerCard = ({ player, onBuyPlayer, disabled }: PlayerCardProps) =
     return "bg-bronze text-primary-foreground";
   };
 
+  const getInitials = (name: string) => {
+    if (!name) return '';
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
   return (
     <div className={`flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border/50 ${disabled ? 'opacity-50' : 'hover:border-pitch-green/30'} transition-colors`}>
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-border flex-shrink-0">
-          <img src={player.image} alt={player.full_name} className="w-full h-full object-cover" />
+        <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-xl font-bold text-gray-700 flex-shrink-0">
+          {getInitials(player.full_name)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
@@ -51,10 +60,6 @@ export const PlayerCard = ({ player, onBuyPlayer, disabled }: PlayerCardProps) =
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Badge className={`${getRatingColor(player.overall_rating)}`}>{player.overall_rating} OVR</Badge>
             <Badge variant="outline">{player.best_position}</Badge>
-            <div className="flex items-center gap-1">
-              <img src={player.club_logo} alt={player.club_name} className="w-4 h-4 object-contain" />
-              <span>{player.club_name}</span>
-            </div>
           </div>
         </div>
       </div>
@@ -63,8 +68,8 @@ export const PlayerCard = ({ player, onBuyPlayer, disabled }: PlayerCardProps) =
           <p className="font-bold text-foreground text-sm">{formatCurrency(player.value)}</p>
           <p className="text-xs text-muted-foreground">Market Value</p>
         </div>
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
           onClick={() => onBuyPlayer(player)}
           disabled={disabled}
           className="bg-gradient-to-r from-pitch-green to-pitch-dark hover:from-pitch-dark hover:to-pitch-green text-primary-foreground font-semibold"

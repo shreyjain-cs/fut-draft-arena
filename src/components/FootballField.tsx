@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Pitch } from '@/components/Pitch';
+import NewPitch from '@/components/NewPitch';
 
 interface DraftedPlayer {
   player_slug: string;
@@ -45,7 +46,8 @@ export const FootballField = ({ squad, onSquadChange }: FootballFieldProps) => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="relative w-full h-full bg-cover bg-center bg-[url('/pitch.svg')]">
+      <div className="relative w-full h-full">
+        <NewPitch />
         <Pitch 
           squad={squad} 
           onPlayerMove={handlePlayerMove}
