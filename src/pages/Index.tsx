@@ -1,12 +1,263 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Timer, Trophy, Users, Coins } from "lucide-react";
+import { PlayerCard } from "@/components/PlayerCard";
+import { SquadDisplay } from "@/components/SquadDisplay";
+import { TriviaModal } from "@/components/TriviaModal";
+import { useDraft } from "@/hooks/useDraft";
+import { useToast } from "@/hooks/use-toast";
+
+interface Player {
+  id: number;
+  name: string;
+  full_name: string;
+  image: string;
+  overall_rating: number;
+  value: string;
+  best_position: string;
+  club_name: string;
+  club_logo: string;
+  country_flag: string;
+}
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+  const { toast } = useToast();
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const {
+    draftId,
+    purse,
+    squad,
+    isActive,
+    startDraft,
+    buyPlayer,
+    sellPlayer,
+    stopDraft
+  } = useDraft();
+
+  useEffect(() => {
+    fetchPlayers();
+  }, []);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isActive) {
+      interval = setInterval(() => {
+        setElapsedTime(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isActive]);
+
+  const fetchPlayers = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('male_players')
+        .select('*')
+        .not('overall_rating', 'is', null)
+        .not('value', 'is', null)
+        .order('overall_rating', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setPlayers(data || []);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load players",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartDraft = async () => {
+    await startDraft();
+    setElapsedTime(0);
+    toast({
+      title: "Draft Started!",
+      description: "Build your dream team within budget",
+    });
+  };
+
+  const handleStopDraft = async () => {
+    await stopDraft();
+    setShowSummary(true);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `€${(amount / 1000000).toFixed(1)}M`;
+  };
+
+  const maxBudget = 500000000;
+  const budgetUsed = maxBudget - purse;
+  const budgetProgress = (budgetUsed / maxBudget) * 100;
+
+  if (!isActive && !draftId) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center bg-card border-border shadow-[var(--shadow-card)]">
+          <CardHeader className="space-y-4">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-pitch-green to-pitch-dark rounded-full flex items-center justify-center">
+              <Trophy className="w-8 h-8 text-primary-foreground" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl font-bold text-foreground mb-2">FutDraft Auction</CardTitle>
+              <p className="text-muted-foreground">Build your dream football team within a €500M budget</p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={handleStartDraft} 
+              size="lg" 
+              className="w-full bg-gradient-to-r from-pitch-green to-pitch-dark hover:from-pitch-dark hover:to-pitch-green text-primary-foreground font-semibold"
+            >
+              Start Draft
+            </Button>
+          </CardContent>
+        </Card>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold text-foreground">FutDraft Auction</h1>
+            {isActive && (
+              <Badge variant="default" className="bg-gradient-to-r from-pitch-green to-pitch-dark">
+                <Timer className="w-4 h-4 mr-1" />
+                {formatTime(elapsedTime)}
+              </Badge>
+            )}
+          </div>
+          {isActive && (
+            <Button onClick={handleStopDraft} variant="destructive">
+              Stop Draft
+            </Button>
+          )}
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Squad & Budget - Left Column */}
+          <div className="lg:col-span-3 space-y-6">
+            <Card className="bg-gradient-to-br from-card to-card/80 border-border shadow-[var(--shadow-card)]">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <Coins className="w-5 h-5 text-gold" />
+                  Budget
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-muted-foreground">Remaining</span>
+                    <span className="font-semibold text-foreground">{formatCurrency(purse)}</span>
+                  </div>
+                  <Progress value={budgetProgress} className="h-2" />
+                  <div className="flex justify-between text-xs mt-1 text-muted-foreground">
+                    <span>€0M</span>
+                    <span>€500M</span>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Squad Value</p>
+                  <p className="text-lg font-bold text-foreground">{formatCurrency(budgetUsed)}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <SquadDisplay squad={squad} onSellPlayer={sellPlayer} />
+          </div>
+
+          {/* Player Market - Center Column */}
+          <div className="lg:col-span-6">
+            <Card className="h-full bg-card border-border shadow-[var(--shadow-card)]">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <Users className="w-5 h-5 text-pitch-green" />
+                  Player Market
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin w-8 h-8 border-2 border-pitch-green border-t-transparent rounded-full mx-auto"></div>
+                    <p className="text-muted-foreground mt-2">Loading players...</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 max-h-[calc(100vh-300px)] overflow-y-auto">
+                    {players.map((player) => (
+                      <PlayerCard
+                        key={player.id}
+                        player={player}
+                        onBuyPlayer={(player) => buyPlayer(player)}
+                        disabled={squad.some(p => p.full_name === player.full_name)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Controls & Trivia - Right Column */}
+          <div className="lg:col-span-3">
+            <TriviaModal draftId={draftId} />
+          </div>
+        </div>
+      </div>
+
+      {/* Summary Modal */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Draft Complete!</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-pitch-green">{formatTime(elapsedTime)}</div>
+              <p className="text-muted-foreground">Total Draft Time</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <div className="text-xl font-bold text-foreground">{squad.length}</div>
+                <p className="text-sm text-muted-foreground">Players</p>
+              </div>
+              <div>
+                <div className="text-xl font-bold text-foreground">
+                  {squad.length ? Math.round(squad.reduce((sum, p) => sum + p.overall_rating, 0) / squad.length) : 0}
+                </div>
+                <p className="text-sm text-muted-foreground">Avg Rating</p>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">Total Spent</p>
+              <p className="text-xl font-bold text-foreground">{formatCurrency(budgetUsed)}</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

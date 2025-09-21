@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      bonus_questions: {
+        Row: {
+          correct_answer: string
+          created_at: string
+          id: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_text: string
+          reward_amount: number
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string
+          id?: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_text: string
+          reward_amount?: number
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string
+          id?: string
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          question_text?: string
+          reward_amount?: number
+        }
+        Relationships: []
+      }
+      drafts: {
+        Row: {
+          consecutive_wrong_answers: number
+          created_at: string
+          draft_active: boolean
+          end_time: string | null
+          formation: string
+          id: string
+          purse: number
+          squad: Json | null
+          start_time: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          consecutive_wrong_answers?: number
+          created_at?: string
+          draft_active?: boolean
+          end_time?: string | null
+          formation?: string
+          id?: string
+          purse?: number
+          squad?: Json | null
+          start_time?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          consecutive_wrong_answers?: number
+          created_at?: string
+          draft_active?: boolean
+          end_time?: string | null
+          formation?: string
+          id?: string
+          purse?: number
+          squad?: Json | null
+          start_time?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       male_players: {
         Row: {
           acceleration: number | null

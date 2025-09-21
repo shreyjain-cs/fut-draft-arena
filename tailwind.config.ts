@@ -57,6 +57,13 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Custom football theme colors
+        'pitch-green': "hsl(var(--pitch-green))",
+        'pitch-dark': "hsl(var(--pitch-dark))",
+        'gold': "hsl(var(--gold))",
+        'silver': "hsl(var(--silver))",
+        'success': "hsl(var(--success))",
+        'warning': "hsl(var(--warning))",
       },
       borderRadius: {
         lg: "var(--radius)",
