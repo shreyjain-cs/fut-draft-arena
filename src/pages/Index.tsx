@@ -18,7 +18,7 @@ interface Player {
   full_name: string;
   image: string;
   overall_rating: number;
-  value: float;
+  value: string;
   best_position: string;
   club_name: string;
   club_logo: string;
