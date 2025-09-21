@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { isDefender, isMidfielder, isForward } from "@/lib/position-groups";
 
 interface Player {
   id: number;
@@ -27,12 +28,17 @@ interface DraftedPlayer {
   display_rating: number;
 }
 
+const MAX_DEFENDERS = 4;
+const MAX_MIDFIELDERS = 4;
+const MAX_FORWARDS = 3;
+
 export const useDraft = () => {
   const { toast } = useToast();
   const [draftId, setDraftId] = useState<string | null>(null);
   const [purse, setPurse] = useState(500000000);
   const [squad, setSquad] = useState<DraftedPlayer[]>([]);
   const [isActive, setIsActive] = useState(false);
+  const [bonusMoney, setBonusMoney] = useState(0);
 
   const refreshBudget = useCallback(async () => {
     if (!draftId) return;
@@ -63,6 +69,7 @@ export const useDraft = () => {
       setPurse(500000000);
       setSquad([]);
       setIsActive(true);
+      setBonusMoney(0);
     } catch (error) {
       toast({ title: "Error starting draft", variant: "destructive" });
     }
@@ -83,6 +90,26 @@ export const useDraft = () => {
       toast({ title: "Squad is full", variant: "destructive" });
       return;
     }
+
+    const numDefenders = squad.filter(p => isDefender(p.best_position)).length;
+    const numMidfielders = squad.filter(p => isMidfielder(p.best_position)).length;
+    const numForwards = squad.filter(p => isForward(p.best_position)).length;
+
+    if (isDefender(player.best_position) && numDefenders >= MAX_DEFENDERS) {
+      toast({ title: "You can't have more than 4 defenders", variant: "destructive" });
+      return;
+    }
+
+    if (isMidfielder(player.best_position) && numMidfielders >= MAX_MIDFIELDERS) {
+      toast({ title: "You can't have more than 4 midfielders", variant: "destructive" });
+      return;
+    }
+
+    if (isForward(player.best_position) && numForwards >= MAX_FORWARDS) {
+      toast({ title: "You can't have more than 3 forwards", variant: "destructive" });
+      return;
+    }
+
 
     const newPurse = purse - price;
     const newPlayer: DraftedPlayer = {
@@ -140,20 +167,32 @@ export const useDraft = () => {
     }
   }, [draftId, purse, squad, toast]);
 
-  const stopDraft = useCallback(async () => {
+  const addBonusMoney = useCallback((amount: number) => {
+    setBonusMoney(prev => prev + amount);
+  }, []);
+
+  const stopDraft = useCallback(async (username: string) => {
     if (draftId) {
       try {
+        const finalScore = purse + bonusMoney;
         const { error } = await supabase
           .from('drafts')
           .update({ draft_active: false, end_time: new Date().toISOString() })
           .eq('id', draftId);
         if (error) throw error;
+
+        // Save to leaderboard
+        const { error: leaderboardError } = await supabase
+          .from('leaderboard')
+          .insert([{ username, score: finalScore }]);
+        if (leaderboardError) throw leaderboardError;
+
         setIsActive(false);
       } catch (error) {
         toast({ title: "Error stopping draft", variant: "destructive" });
       }
     }
-  }, [draftId, toast]);
+  }, [draftId, toast, purse, bonusMoney]);
 
-  return { draftId, purse, squad, setSquad, isActive, startDraft, buyPlayer, sellPlayer, stopDraft, refreshBudget };
+  return { draftId, purse, squad, setSquad, isActive, startDraft, buyPlayer, sellPlayer, stopDraft, refreshBudget, bonusMoney, addBonusMoney };
 };

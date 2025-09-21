@@ -149,8 +149,8 @@ export const SquadDisplay = ({ squad, onSellPlayer, onSquadChange }: SquadDispla
                   key={player.player_slug}
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border/50 hover:border-pitch-green/30 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                     <img src={player.image || './placeholder.png'} alt={player.name} className="w-12 h-12 rounded-full" />
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <img src={player.image || './placeholder.png'} alt={player.name} className="w-12 h-12 rounded-full flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-medium text-foreground truncate text-sm">
@@ -159,22 +159,24 @@ export const SquadDisplay = ({ squad, onSellPlayer, onSquadChange }: SquadDispla
                         <Badge className={`${getRatingColor(player.display_rating)} bg-card border-border text-xs font-bold`}>
                           {player.display_rating}
                         </Badge>
-                        <Badge variant="outline">{player.best_position}</Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         Bought for {formatCurrency(player.purchase_price)}
                       </p>
                     </div>
                   </div>
-                  
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onSellPlayer(player.player_slug)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10 p-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                    <Badge variant="outline">{player.best_position}</Badge>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onSellPlayer(player.player_slug)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 p-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
