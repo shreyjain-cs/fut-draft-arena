@@ -146,7 +146,7 @@ const Index = () => {
               <Trophy className="w-8 h-8 text-primary-foreground" />
             </div>
             <div>
-              <CardTitle className="text-2xl font-bold text-foreground mb-2">FutDraft Auction</CardTitle>
+              <CardTitle className="text-2xl font-bold text-foreground mb-2">FootDraft Auction</CardTitle>
               <p className="text-muted-foreground">Choose your game mode</p>
             </div>
           </CardHeader>
@@ -165,7 +165,7 @@ const Index = () => {
               className="w-full border-pitch-green text-pitch-green hover:bg-pitch-green/10 font-semibold"
             >
               <Star className="w-4 h-4 mr-2" />
-              Fut Draft Wildcard
+              Foot Draft Wildcard
             </Button>
           </CardContent>
         </Card>
@@ -182,7 +182,7 @@ const Index = () => {
               <Button variant="outline" size="icon" onClick={resetDraft}>
                 <ArrowLeft className="w-4 h-4" />
               </Button>
-              <h1 className="text-2xl font-bold text-foreground">FutDraft Auction</h1>
+              <h1 className="text-2xl font-bold text-foreground">FootDraft Auction</h1>
               {isActive && (
                 <Badge variant="default" className="bg-gradient-to-r from-pitch-green to-pitch-dark">
                   <Timer className="w-4 h-4 mr-1" />

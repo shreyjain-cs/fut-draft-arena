@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { isDefender, isMidfielder, isForward, POSITION_GROUPS } from "@/lib/position-groups";
+import { isDefender, isMidfielder, isForward, POSITION_GROUPS, CENTER_BACKS } from "@/lib/position-groups";
 import { FORMATIONS } from "@/lib/formations";
 
 interface Player {
@@ -79,7 +79,12 @@ export const useDraft = () => {
         const positionIndex = availablePositions.indexOf(altPos);
         if (positionIndex !== -1) {
           player.position = altPos;
-          player.display_rating = Math.round((player.original_overall_rating || player.overall_rating) * 0.9);
+          const isCenterBackInPosition = CENTER_BACKS.includes(bestPos) && CENTER_BACKS.includes(altPos);
+          if (isCenterBackInPosition) {
+            player.display_rating = player.original_overall_rating || player.overall_rating;
+          } else {
+            player.display_rating = Math.round((player.original_overall_rating || player.overall_rating) * 0.9);
+          }
           assignedPlayers.push(player);
           availablePositions.splice(positionIndex, 1);
           isAssigned = true;
