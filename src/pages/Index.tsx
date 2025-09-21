@@ -17,7 +17,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 interface Player {
   id: number;
   name: string;
-  full_name: string;
   image: string;
   overall_rating: number;
   value: string;
@@ -29,9 +28,10 @@ interface Player {
 
 interface DraftedPlayer {
   player_slug: string;
-  full_name: string;
+  name: string;
   overall_rating: number;
   purchase_price: number;
+  best_position: string;
   position?: string;
 }
 
@@ -73,7 +73,7 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('male_players')
-        .select('*')
+        .select('id,name,image,overall_rating,value,best_position,club_name,club_logo,country_flag')
         .not('overall_rating', 'is', null)
         .not('value', 'is', null)
         .order('overall_rating', { ascending: false })
@@ -240,7 +240,7 @@ const Index = () => {
                           key={player.id}
                           player={player}
                           onBuyPlayer={buyPlayer}
-                          disabled={squad.some(p => p.full_name === player.full_name)}
+                          disabled={squad.some(p => p.player_slug === player.name)}
                         />
                       ))}
                     </div>

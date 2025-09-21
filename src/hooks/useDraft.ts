@@ -17,7 +17,7 @@ interface Player {
 
 interface DraftedPlayer {
   player_slug: string;
-  full_name: string;
+  name: string;
   overall_rating: number;
   purchase_price: number;
   best_position: string;
@@ -49,6 +49,11 @@ export const useDraft = () => {
   }, [toast]);
 
   const buyPlayer = useCallback(async (player: Player) => {
+    if (squad.some(p => p.player_slug === player.name)) {
+      toast({ title: "Player already in squad", variant: "destructive" });
+      return;
+    }
+
     const price = parseFloat(player.value.replace(/[^0-9.]/g, '')) * (player.value.includes('M') ? 1000000 : 1);
     if (purse < price) {
       toast({ title: "Not enough funds", variant: "destructive" });
@@ -62,7 +67,7 @@ export const useDraft = () => {
     const newPurse = purse - price;
     const newPlayer: DraftedPlayer = {
       player_slug: player.name,
-      full_name: player.full_name,
+      name: player.name,
       overall_rating: player.overall_rating,
       purchase_price: price,
       best_position: player.best_position,

@@ -3,24 +3,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Trash2, Shield, LayoutGrid, List } from "lucide-react";
-import { FootballField } from '@/components/FootballField';
+import { NewPitch } from '@/components/NewPitch';
 
 interface DraftedPlayer {
   player_slug: string;
-  full_name: string;
+  name: string;
   overall_rating: number;
   purchase_price: number;
   best_position: string;
   position?: string;
+  image?: string;
 }
 
 interface SquadDisplayProps {
   squad: DraftedPlayer[];
   onSellPlayer: (playerSlug: string) => void;
-  onSquadChange: (squad: DraftedPlayer[]) => void;
 }
 
-export const SquadDisplay = ({ squad, onSellPlayer, onSquadChange }: SquadDisplayProps) => {
+export const SquadDisplay = ({ squad, onSellPlayer }: SquadDisplayProps) => {
   const [view, setView] = useState('list'); // 'list' or 'field'
 
   const formatCurrency = (amount: number) => {
@@ -75,7 +75,7 @@ export const SquadDisplay = ({ squad, onSellPlayer, onSquadChange }: SquadDispla
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium text-foreground truncate text-sm">
-                        {player.full_name}
+                        {player.name}
                       </h4>
                       <Badge className={`${getRatingColor(player.overall_rating)} bg-card border-border text-xs font-bold`}>
                         {player.overall_rating}
@@ -100,8 +100,8 @@ export const SquadDisplay = ({ squad, onSellPlayer, onSquadChange }: SquadDispla
             </div>
           )
         ) : (
-          <div className="h-[400px]">
-            <FootballField squad={squad} onSquadChange={onSquadChange} />
+          <div className="h-[500px]">
+            <NewPitch squad={squad} onBack={() => setView('list')} />
           </div>
         )}
       </CardContent>
